@@ -1,0 +1,93 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# --- CONFIGURATION ---
+DAYS_IN_MONTH = 30.44
+plt.style.use('ggplot')
+
+
+def get_input(prompt, min_val=0):
+    while True:
+        try:
+            val = float(input(prompt))
+            if val < min_val:
+                raise ValueError
+            return val
+        except ValueError:
+            print("❌ Please enter a valid positive number.")
+
+
+
+# 1. GLOBAL PARAMETERS
+# =============================
+print("\n--- 🛢 OILFIELD ASSET SIMULATOR 🛢---")
+
+oil_price = get_input("Market Oil Price ($/barrel): ")
+setup_cost = get_input("Initial Drilling Cost per Well ($): ")
+opex = get_input("Monthly Operating Cost per Well ($): ")
+months = int(get_input("Simulation Length (months): ", min_val=1))
+
+# Monthly time base (consistent everywhere now)
+t_months = np.arange(months)
+
+well_data = []
+
+
+
+# 2. ENGINEERING MODEL
+# =============================
+num_wells = int(get_input("Number of Wells: ", min_val=1))
+
+for i in range(num_wells):
+    print(f"\nData for Well {i+1}:")
+
+    q0 = get_input("  Initial Production (barrels/day): ")
+    d = get_input("  Resevoir Monthly Decline Rate (decimal, e.g. 0.08): ")
+
+    # Monthly production using consistent time base
+    monthly_prod = q0 * np.exp(-d * t_months)
+
+    # Revenue per month
+    monthly_revenue = monthly_prod * DAYS_IN_MONTH * oil_price
+
+    # Profit per month
+    monthly_profit = monthly_revenue - opex
+
+    # Cumulative profit (clear setup cost handling)
+    cum_profit = np.cumsum(monthly_profit)
+    cum_profit -= setup_cost
+
+    well_data.append({
+        "id": f"Well {i+1}",
+        "monthly_prod": monthly_prod,
+        "cum_profit": cum_profit
+    })
+
+
+
+# 3. VISUALIZATION
+# =============================
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+
+for well in well_data:
+    ax1.plot(t_months, well["monthly_prod"], label=well["id"], lw=2)
+    ax2.plot(t_months, well["cum_profit"], label=well["id"], lw=2)
+
+
+# --- Production Plot ---
+ax1.set_title("Production Output", fontweight='bold')
+ax1.set_xlabel("Time (Months)")
+ax1.set_ylabel("Production (barrels/day)")
+ax1.legend()
+
+# --- Profit Plot ---
+ax2.set_title("Total Revenue (Net) Generation", fontweight='bold')
+ax2.set_xlabel("Time (Months)")
+ax2.set_ylabel("Net Cash Flow ($)")
+ax2.axhline(0, color='black', lw=1, ls='--')
+ax2.legend()
+
+plt.tight_layout()
+
+print("\n📊 Analysis complete. Break-even line shown at $0.")
+plt.show()
